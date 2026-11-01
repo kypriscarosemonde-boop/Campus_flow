@@ -16,6 +16,7 @@ class CampusFlowApp extends StatelessWidget {
 
       theme: ThemeData(
         useMaterial3: true,
+        fontFamily: 'Roboto',
         scaffoldBackgroundColor: const Color(0xFFF4F6FA),
 
         colorScheme: ColorScheme.fromSeed(
@@ -62,10 +63,11 @@ class HomePage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.school,
-              size: 90,
-              color: Color(0xFF173B70),
+            Image.asset(
+              'assets/images/logo.png',
+              width: 100,
+              height: 100,
+              fit: BoxFit.contain,
             ),
 
             const SizedBox(height: 20),
