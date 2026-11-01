@@ -219,3 +219,5 @@ Cette méthode permet une conservation locale des données, sans nécessiter act
 ## 9. Conclusion
 
 CampusFlow est une application de suivi des activités universitaires développée avec Flutter. Elle met en œuvre les principaux concepts du développement mobile et Web, notamment la création d'interfaces, la navigation entre les pages, la gestion des formulaires, la validation des données, l'adaptation aux différentes tailles d'écran et la persistance locale des informations.
+
+Voici le lien github : https://github.com/kypriscarosemonde-boop/Campus_flow.git
