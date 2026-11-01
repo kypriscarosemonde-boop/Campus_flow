@@ -1,4 +1,5 @@
 
+import 'pages/echeances_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -89,7 +90,14 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 30),
 
             ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const EcheancesPage(),
+                  ),
+                );
+              },
               child: const Text('Commencer'),
             ),
           ],
