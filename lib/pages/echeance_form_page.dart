@@ -2,11 +2,15 @@
 import 'package:flutter/material.dart';
 
 class EcheanceFormPage extends StatefulWidget {
-  const EcheanceFormPage({super.key});
+  final Map<String, dynamic>? echeance;
+
+  const EcheanceFormPage({
+    super.key,
+    this.echeance,
+  });
 
   @override
-  State<EcheanceFormPage> createState() =>
-      _EcheanceFormPageState();
+  State<EcheanceFormPage> createState() => _EcheanceFormPageState();
 }
 
 class _EcheanceFormPageState extends State<EcheanceFormPage> {
@@ -18,6 +22,21 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
   final TextEditingController _dateController =
   TextEditingController();
 
+  bool get estModification => widget.echeance != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (estModification) {
+      _titreController.text =
+          widget.echeance!['titre']?.toString() ?? '';
+
+      _dateController.text =
+          widget.echeance!['date']?.toString() ?? '';
+    }
+  }
+
   @override
   void dispose() {
     _titreController.dispose();
@@ -25,26 +44,81 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
     super.dispose();
   }
 
-  // Enregistrer une nouvelle échéance
-  void _enregistrer() {
-    if (_formKey.currentState!.validate()) {
-      final nouvelleEcheance = {
-        'titre': _titreController.text.trim(),
-        'date': _dateController.text,
-        'terminee': false,
-        // L'icône est enregistrée sous forme de texte
-        'icone': 'event_note',
-      };
+  // Convertir une date enregistrée en DateTime.
+  DateTime? _convertirDate(String valeur) {
+    final texte = valeur.trim();
 
-      Navigator.pop(context, nouvelleEcheance);
+    final formatNumerique = RegExp(
+      r'^(\d{1,2})/(\d{1,2})/(\d{4})$',
+    );
+
+    final correspondance = formatNumerique.firstMatch(texte);
+
+    if (correspondance != null) {
+      return DateTime(
+        int.parse(correspondance.group(3)!),
+        int.parse(correspondance.group(2)!),
+        int.parse(correspondance.group(1)!),
+      );
     }
+
+    const mois = {
+      'janvier': 1,
+      'février': 2,
+      'mars': 3,
+      'avril': 4,
+      'mai': 5,
+      'juin': 6,
+      'juillet': 7,
+      'août': 8,
+      'septembre': 9,
+      'octobre': 10,
+      'novembre': 11,
+      'décembre': 12,
+    };
+
+    final parties = texte.toLowerCase().split(' ');
+
+    if (parties.length == 3) {
+      final jour = int.tryParse(parties[0]);
+      final numeroMois = mois[parties[1]];
+      final annee = int.tryParse(parties[2]);
+
+      if (jour != null && numeroMois != null && annee != null) {
+        return DateTime(annee, numeroMois, jour);
+      }
+    }
+
+    return null;
   }
 
-  // Choisir une date
+  // Enregistrer ou modifier une échéance.
+  void _enregistrer() {
+    if (!_formKey.currentState!.validate()) return;
+
+    final Map<String, dynamic> nouvelleEcheance = {
+      if (estModification) ...widget.echeance!,
+      'titre': _titreController.text.trim(),
+      'date': _dateController.text,
+      'terminee': estModification
+          ? widget.echeance!['terminee'] == true
+          : false,
+      'icone': estModification
+          ? widget.echeance!['icone'] ?? 'event_note'
+          : 'event_note',
+    };
+
+    Navigator.pop(context, nouvelleEcheance);
+  }
+
+  // Choisir une date.
   Future<void> _choisirDate() async {
+    final DateTime? dateExistante =
+    _convertirDate(_dateController.text);
+
     final DateTime? date = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: dateExistante ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
       helpText: 'Sélectionner une date limite',
@@ -68,7 +142,11 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
       backgroundColor: const Color(0xFFF4F6FA),
 
       appBar: AppBar(
-        title: const Text('Ajouter une échéance'),
+        title: Text(
+          estModification
+              ? 'Modifier une échéance'
+              : 'Ajouter une échéance',
+        ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF173B70),
         elevation: 0,
@@ -83,9 +161,11 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Nouvelle activité',
-                style: TextStyle(
+              Text(
+                estModification
+                    ? 'Modifier l’activité'
+                    : 'Nouvelle activité',
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF173B70),
@@ -103,9 +183,7 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
 
               const Text(
                 'Titre de l’activité',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 10),
@@ -113,7 +191,6 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
               TextFormField(
                 controller: _titreController,
                 textCapitalization: TextCapitalization.sentences,
-
                 decoration: InputDecoration(
                   hintText: 'Exemple : Projet Flutter',
                   prefixIcon: const Icon(Icons.edit),
@@ -123,12 +200,10 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Veuillez saisir un titre';
                   }
-
                   return null;
                 },
               ),
@@ -137,9 +212,7 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
 
               const Text(
                 'Date limite',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 10),
@@ -147,7 +220,6 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
               TextFormField(
                 controller: _dateController,
                 readOnly: true,
-
                 decoration: InputDecoration(
                   hintText: 'Choisir une date',
                   prefixIcon: const Icon(Icons.calendar_month),
@@ -157,14 +229,11 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-
                 onTap: _choisirDate,
-
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Veuillez choisir une date';
                   }
-
                   return null;
                 },
               ),
@@ -174,14 +243,12 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
               SizedBox(
                 width: double.infinity,
                 height: 52,
-
                 child: FilledButton.icon(
                   onPressed: _enregistrer,
-
                   icon: const Icon(Icons.save),
-
-                  label: const Text('Enregistrer'),
-
+                  label: Text(
+                    estModification ? 'Enregistrer les modifications' : 'Enregistrer',
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF173B70),
                   ),
