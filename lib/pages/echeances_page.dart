@@ -144,11 +144,8 @@ class _EcheancesPageState extends State<EcheancesPage> {
           final Map<String, dynamic> nouvelle =
           Map<String, dynamic>.from(element);
 
-          nouvelle['icone'] =
-              _nomDepuisIcone(nouvelle['icone']);
-
-          nouvelle['terminee'] =
-              nouvelle['terminee'] == true;
+          nouvelle['icone'] = _nomDepuisIcone(nouvelle['icone']);
+          nouvelle['terminee'] = nouvelle['terminee'] == true;
 
           return nouvelle;
         }).toList();
@@ -201,11 +198,8 @@ class _EcheancesPageState extends State<EcheancesPage> {
       final Map<String, dynamic> nouvelle =
       Map<String, dynamic>.from(nouvelleEcheance);
 
-      nouvelle['icone'] =
-          _nomDepuisIcone(nouvelle['icone']);
-
-      nouvelle['terminee'] =
-          nouvelle['terminee'] == true;
+      nouvelle['icone'] = _nomDepuisIcone(nouvelle['icone']);
+      nouvelle['terminee'] = nouvelle['terminee'] == true;
 
       setState(() {
         echeances.add(nouvelle);
@@ -307,6 +301,16 @@ class _EcheancesPageState extends State<EcheancesPage> {
         backgroundColor: Colors.white,
         foregroundColor: couleurPrincipale,
         elevation: 0,
+
+        // Flèche pour revenir à la page de connexion
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Retour à l’accueil',
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+
         title: const Text(
           'CampusFlow',
           style: TextStyle(
@@ -355,12 +359,13 @@ class _EcheancesPageState extends State<EcheancesPage> {
         },
       ),
 
-
-
       // Navigation inférieure
       bottomNavigationBar: Container(
         height: 90,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 10,
+        ),
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(
@@ -419,7 +424,8 @@ class _EcheancesPageState extends State<EcheancesPage> {
               child: SizedBox(
                 height: 55,
                 child: ElevatedButton.icon(
-                  onPressed: chargementTermine ? _ajouterEcheance : null,
+                  onPressed:
+                  chargementTermine ? _ajouterEcheance : null,
                   icon: const Icon(Icons.add, size: 25),
                   label: const Text(
                     'Ajouter une échéance',
@@ -441,6 +447,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
       ),
     );
   }
+
   // Contenu principal
   Widget _contenuPrincipal(
       int total,

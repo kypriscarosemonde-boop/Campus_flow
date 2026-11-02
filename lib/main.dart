@@ -68,6 +68,10 @@ class _HomePageState extends State<HomePage> {
 
   bool masquerMotDePasse = true;
 
+  // Identifiants de connexion
+  final String emailAutorise = 'admin@campusflow.com';
+  final String motDePasseAutorise = 'CampusFlow2026';
+
   @override
   void dispose() {
     emailController.dispose();
@@ -75,13 +79,30 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // Vérification du formulaire et accès aux échéances
+  // Vérification des identifiants
   void _seConnecter() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.pushReplacement(
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    final email = emailController.text.trim();
+    final motDePasse = passwordController.text;
+
+    if (email == emailAutorise &&
+        motDePasse == motDePasseAutorise) {
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => const EcheancesPage(),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Adresse e-mail ou mot de passe incorrect.',
+          ),
+          backgroundColor: Colors.red,
         ),
       );
     }
@@ -121,7 +142,7 @@ class _HomePageState extends State<HomePage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
 
-                      // Logo de l'application
+                      // Logo
                       Image.asset(
                         'assets/images/logo.png',
                         width: 100,
@@ -154,7 +175,7 @@ class _HomePageState extends State<HomePage> {
 
                       const SizedBox(height: 30),
 
-                      // Champ adresse e-mail
+                      // Adresse e-mail
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -173,14 +194,17 @@ class _HomePageState extends State<HomePage> {
 
                         decoration: InputDecoration(
                           hintText: 'Entrez votre adresse e-mail',
-                          prefixIcon: const Icon(Icons.email_outlined),
+                          prefixIcon: const Icon(
+                            Icons.email_outlined,
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
 
                         validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
+                          if (value == null ||
+                              value.trim().isEmpty) {
                             return 'Veuillez saisir votre adresse e-mail';
                           }
 
@@ -196,7 +220,7 @@ class _HomePageState extends State<HomePage> {
 
                       const SizedBox(height: 20),
 
-                      // Champ mot de passe
+                      // Mot de passe
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -215,7 +239,9 @@ class _HomePageState extends State<HomePage> {
 
                         decoration: InputDecoration(
                           hintText: 'Entrez votre mot de passe',
-                          prefixIcon: const Icon(Icons.lock_outline),
+                          prefixIcon: const Icon(
+                            Icons.lock_outline,
+                          ),
 
                           suffixIcon: IconButton(
                             icon: Icon(
