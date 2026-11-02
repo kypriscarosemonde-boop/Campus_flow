@@ -157,6 +157,18 @@ flutter run -d chrome --web-port=5000
 
 L'application sera compilée et ouverte dans Google Chrome.
 
+## Identifiants de connexion
+
+Pour accéder à l'application CampusFlow, une page de connexion est proposée à l'utilisateur.
+
+Les identifiants de connexion sont les suivants :
+
+
+## Adresse e-mail : admin@campusflow.com 
+##  Mot de passe : CampusFlow2026 
+
+**Remarque :** Ces identifiants sont définis directement dans le code de l'application et servent uniquement aux tests et à la démonstration. Ils ne constituent pas un système d'authentification sécurisé pour une utilisation en production.
+
 ## 6. Pourquoi préciser le port 5000 ?
 
 Dans la commande :
