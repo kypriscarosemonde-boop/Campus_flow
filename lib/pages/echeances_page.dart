@@ -429,7 +429,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
                     backgroundColor: couleurPrincipale,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(15),
                     ),
                     elevation: 3,
                   ),
