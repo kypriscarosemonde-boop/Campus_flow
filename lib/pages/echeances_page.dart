@@ -1,55 +1,21 @@
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import 'echeance_detail_page.dart';
+import '../models/tache.dart';
+import '../providers/tache_provider.dart';
 import 'echeance_form_page.dart';
 
-class EcheancesPage extends StatefulWidget {
+class EcheancesPage extends ConsumerStatefulWidget {
   const EcheancesPage({super.key});
 
   @override
-  State<EcheancesPage> createState() => _EcheancesPageState();
+  ConsumerState<EcheancesPage> createState() =>
+      _EcheancesPageState();
 }
 
-class _EcheancesPageState extends State<EcheancesPage> {
-  List<Map<String, dynamic>> echeances = [
-    {
-      'titre': 'Consulter emploi du temps',
-      'date': '01 novembre 2026',
-      'terminee': true,
-      'icone': 'calendar_month',
-    },
-    {
-      'titre': 'Soumission des devoirs',
-      'date': '20 novembre 2026',
-      'terminee': false,
-      'icone': 'assignment',
-    },
-    {
-      'titre': 'Récupération des supports de cours',
-      'date': '25 octobre 2026',
-      'terminee': true,
-      'icone': 'menu_book',
-    },
-    {
-      'titre': 'Suivi des présences',
-      'date': '01 octobre 2026',
-      'terminee': false,
-      'icone': 'people_alt',
-    },
-    {
-      'titre': 'Projet Flutter',
-      'date': '15 novembre 2026',
-      'terminee': false,
-      'icone': 'code',
-    },
-  ];
-
-  bool chargementTermine = false;
-
+class _EcheancesPageState extends ConsumerState<EcheancesPage> {
   final TextEditingController _rechercheController =
   TextEditingController();
 
@@ -57,12 +23,6 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
   final Color couleurPrincipale = const Color(0xFF173B70);
   final Color couleurFond = const Color(0xFFF4F6FA);
-
-  @override
-  void initState() {
-    super.initState();
-    _chargerEcheances();
-  }
 
   @override
   void dispose() {
@@ -74,7 +34,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
   // GESTION DES ICÔNES
   // =====================================================
 
-  IconData _iconeDepuisNom(dynamic nom) {
+  IconData _iconeDepuisNom(String nom) {
     switch (nom) {
       case 'calendar_month':
         return Icons.calendar_month;
@@ -86,7 +46,6 @@ class _EcheancesPageState extends State<EcheancesPage> {
         return Icons.people_alt;
       case 'code':
         return Icons.code;
-      case 'event_note':
       default:
         return Icons.event_note;
     }
@@ -96,12 +55,9 @@ class _EcheancesPageState extends State<EcheancesPage> {
   // GESTION DES DATES
   // =====================================================
 
-  DateTime? _convertirDate(dynamic valeur) {
-    if (valeur == null) return null;
+  DateTime? _convertirDate(String valeur) {
+    final texte = valeur.trim();
 
-    final texte = valeur.toString().trim();
-
-    // Format : 01/11/2026
     final formatNumerique =
     RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$');
 
@@ -115,7 +71,6 @@ class _EcheancesPageState extends State<EcheancesPage> {
       );
     }
 
-    // Format : 01 novembre 2026
     const mois = {
       'janvier': 1,
       'février': 2,
@@ -141,7 +96,9 @@ class _EcheancesPageState extends State<EcheancesPage> {
       final numeroMois = mois[parties[1]];
       final annee = int.tryParse(parties[2]);
 
-      if (jour != null && numeroMois != null && annee != null) {
+      if (jour != null &&
+          numeroMois != null &&
+          annee != null) {
         return DateTime(annee, numeroMois, jour);
       }
     }
@@ -149,16 +106,14 @@ class _EcheancesPageState extends State<EcheancesPage> {
     return DateTime.tryParse(texte);
   }
 
-  // Vérifier si une échéance est en retard.
-  bool _estEnRetard(Map<String, dynamic> echeance) {
-    if (echeance['terminee'] == true) return false;
+  bool _estEnRetard(Tache tache) {
+    if (tache.terminee) return false;
 
-    final date = _convertirDate(echeance['date']);
+    final date = _convertirDate(tache.date);
 
     if (date == null) return false;
 
     final maintenant = DateTime.now();
-
     final aujourdHui = DateTime(
       maintenant.year,
       maintenant.month,
@@ -169,96 +124,45 @@ class _EcheancesPageState extends State<EcheancesPage> {
   }
 
   // =====================================================
-  // SAUVEGARDE ET CHARGEMENT
+  // RECHERCHE ET FILTRAGE
   // =====================================================
 
-  Future<void> _sauvegarderEcheances() async {
-    final preferences = await SharedPreferences.getInstance();
 
-    final donnees = jsonEncode(echeances);
-
-    await preferences.setString('mes_echeances', donnees);
-  }
-
-  Future<void> _chargerEcheances() async {
-    try {
-      final preferences = await SharedPreferences.getInstance();
-
-      final donnees = preferences.getString('mes_echeances');
-
-      if (donnees != null) {
-        final List<dynamic> liste = jsonDecode(donnees);
-
-        final listeChargee = liste.map((element) {
-          final nouvelle = Map<String, dynamic>.from(element);
-
-          nouvelle['terminee'] = nouvelle['terminee'] == true;
-
-          return nouvelle;
-        }).toList();
-
-        if (!mounted) return;
-
-        setState(() {
-          echeances = listeChargee;
-          chargementTermine = true;
-        });
-      } else {
-        await _sauvegarderEcheances();
-
-        if (!mounted) return;
-
-        setState(() {
-          chargementTermine = true;
-        });
-      }
-    } catch (erreur) {
-      if (!mounted) return;
-
-      setState(() {
-        chargementTermine = true;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors du chargement : $erreur'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   // =====================================================
-  // AJOUT D'UNE ÉCHÉANCE
+  // AJOUT D'UNE TÂCHE
   // =====================================================
 
-  Future<void> _ajouterEcheance() async {
-    final nouvelleEcheance = await Navigator.push(
+  Future<void> _ajouterTache() async {
+    final resultat = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const EcheanceFormPage(),
       ),
     );
 
-    if (!mounted || nouvelleEcheance == null) return;
+    if (!mounted || resultat == null) return;
 
     try {
-      final Map<String, dynamic> nouvelle =
-      Map<String, dynamic>.from(nouvelleEcheance);
+      final donnees = Map<String, dynamic>.from(resultat);
 
-      nouvelle['terminee'] = nouvelle['terminee'] == true;
+      final nouvelleTache = Tache(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        titre: donnees['titre']?.toString() ?? '',
+        date: donnees['date']?.toString() ?? '',
+        terminee: donnees['terminee'] == true,
+        icone: donnees['icone']?.toString() ?? 'event_note',
+      );
 
-      setState(() {
-        echeances.add(nouvelle);
-      });
-
-      await _sauvegarderEcheances();
+      await ref.read(tachesProvider.notifier).ajouter(
+        nouvelleTache,
+      );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Nouvelle échéance ajoutée et sauvegardée !'),
+          content: Text('Nouvelle tâche ajoutée et sauvegardée !'),
           backgroundColor: Colors.green,
         ),
       );
@@ -275,21 +179,15 @@ class _EcheancesPageState extends State<EcheancesPage> {
   }
 
   // =====================================================
-  // MODIFICATION D'UNE ÉCHÉANCE
+  // MODIFICATION D'UNE TÂCHE
   // =====================================================
 
-  Future<void> _modifierEcheance(
-      Map<String, dynamic> echeance,
-      ) async {
-    final index = echeances.indexOf(echeance);
-
-    if (index == -1) return;
-
+  Future<void> _modifierTache(Tache tache) async {
     final resultat = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => EcheanceFormPage(
-          echeance: Map<String, dynamic>.from(echeance),
+          echeance: tache.toMap(),
         ),
       ),
     );
@@ -297,20 +195,25 @@ class _EcheancesPageState extends State<EcheancesPage> {
     if (!mounted || resultat == null) return;
 
     try {
-      final Map<String, dynamic> modifiee =
-      Map<String, dynamic>.from(resultat);
+      final donnees = Map<String, dynamic>.from(resultat);
 
-      setState(() {
-        echeances[index] = modifiee;
-      });
+      final tacheModifiee = Tache(
+        id: tache.id,
+        titre: donnees['titre']?.toString() ?? tache.titre,
+        date: donnees['date']?.toString() ?? tache.date,
+        terminee: donnees['terminee'] == true,
+        icone: donnees['icone']?.toString() ?? tache.icone,
+      );
 
-      await _sauvegarderEcheances();
+      await ref.read(tachesProvider.notifier).modifier(
+        tacheModifiee,
+      );
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Échéance modifiée avec succès !'),
+          content: Text('Tâche modifiée avec succès !'),
           backgroundColor: Colors.green,
         ),
       );
@@ -327,19 +230,17 @@ class _EcheancesPageState extends State<EcheancesPage> {
   }
 
   // =====================================================
-  // SUPPRESSION D'UNE ÉCHÉANCE
+  // SUPPRESSION D'UNE TÂCHE
   // =====================================================
 
-  Future<void> _supprimerEcheance(
-      Map<String, dynamic> echeance,
-      ) async {
+  Future<void> _supprimerTache(Tache tache) async {
     final confirmation = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Supprimer cette échéance ?'),
+          title: const Text('Supprimer cette tâche ?'),
           content: Text(
-            'Voulez-vous vraiment supprimer "${echeance['titre']}" ?',
+            'Voulez-vous vraiment supprimer "${tache.titre}" ?',
           ),
           actions: [
             TextButton(
@@ -360,33 +261,19 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
     if (!mounted || confirmation != true) return;
 
-    final index = echeances.indexOf(echeance);
-
-    if (index == -1) return;
-
-    final echeanceSupprimee = echeances[index];
-
-    setState(() {
-      echeances.removeAt(index);
-    });
-
     try {
-      await _sauvegarderEcheances();
+      await ref.read(tachesProvider.notifier).supprimer(tache.id);
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Échéance supprimée avec succès !'),
+          content: Text('Tâche supprimée avec succès !'),
           backgroundColor: Colors.green,
         ),
       );
     } catch (erreur) {
       if (!mounted) return;
-
-      setState(() {
-        echeances.insert(index, echeanceSupprimee);
-      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -401,97 +288,17 @@ class _EcheancesPageState extends State<EcheancesPage> {
   // CONSULTATION DES DÉTAILS
   // =====================================================
 
-  Future<void> _ouvrirDetails(
-      Map<String, dynamic> echeance,
-      ) async {
-    final resultat = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => EcheanceDetailPage(
-          titre: echeance['titre'].toString(),
-          date: echeance['date'].toString(),
-          terminee: echeance['terminee'] == true,
-        ),
-      ),
+  Future<void> _ouvrirDetails(Tache tache) async {
+    final resultat = await context.push<bool>(
+      '/echeances/${tache.id}',
     );
 
     if (!mounted) return;
 
     if (resultat == true) {
-      await _marquerCommeTerminee(echeance);
+      await ref.read(tachesProvider.notifier)
+          .marquerCommeTerminee(tache.id, true);
     }
-  }
-
-  // =====================================================
-  // MARQUER UNE ÉCHÉANCE COMME TERMINÉE
-  // =====================================================
-
-  Future<void> _marquerCommeTerminee(
-      Map<String, dynamic> echeance,
-      ) async {
-    if (echeance['terminee'] == true) return;
-
-    setState(() {
-      echeance['terminee'] = true;
-    });
-
-    try {
-      await _sauvegarderEcheances();
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Échéance marquée comme terminée !'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (erreur) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de la sauvegarde : $erreur'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  // =====================================================
-  // RECHERCHE ET FILTRAGE
-  // =====================================================
-
-  List<Map<String, dynamic>> get echeancesFiltrees {
-    final recherche = _rechercheController.text.toLowerCase().trim();
-
-    return echeances.where((echeance) {
-      final titre = echeance['titre'].toString().toLowerCase();
-
-      final correspondRecherche = titre.contains(recherche);
-
-      bool correspondFiltre = true;
-
-      switch (filtreActuel) {
-        case 'À faire':
-          correspondFiltre = echeance['terminee'] != true;
-          break;
-
-        case 'Terminées':
-          correspondFiltre = echeance['terminee'] == true;
-          break;
-
-        case 'En retard':
-          correspondFiltre = _estEnRetard(echeance);
-          break;
-
-        case 'Toutes':
-        default:
-          correspondFiltre = true;
-      }
-
-      return correspondRecherche && correspondFiltre;
-    }).toList();
   }
 
   // =====================================================
@@ -500,6 +307,13 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tachesAsync = switch (filtreActuel) {
+      'À faire' => ref.watch(tachesAFaireProvider),
+      'Faites' => ref.watch(tachesFaitesProvider),
+      'En retard' => ref.watch(tachesEnRetardProvider),
+      _ => ref.watch(tachesProvider),
+    };
+
     return Scaffold(
       backgroundColor: couleurFond,
 
@@ -507,14 +321,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
         backgroundColor: Colors.white,
         foregroundColor: couleurPrincipale,
         elevation: 0,
-
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          tooltip: "Retour à la vue d'ensemble",
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
+        automaticallyImplyLeading: false,
 
         title: const Text(
           'Mes échéances',
@@ -538,80 +345,61 @@ class _EcheancesPageState extends State<EcheancesPage> {
         ],
       ),
 
-      body: !chargementTermine
-          ? Center(
-        child: CircularProgressIndicator(
-          color: couleurPrincipale,
+      body: tachesAsync.when(
+        loading: () => Center(
+          child: CircularProgressIndicator(
+            color: couleurPrincipale,
+          ),
         ),
-      )
-          : LayoutBuilder(
-        builder: (context, contraintes) {
-          final bool estTablette =
-              contraintes.maxWidth >= 840;
 
-          return Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: estTablette ? 900 : double.infinity,
-              ),
-              child: _contenuPrincipal(),
-            ),
+        error: (erreur, trace) => Center(
+          child: Text('Erreur de chargement : $erreur'),
+        ),
+
+        data: (taches) {
+          final recherche = _rechercheController.text.toLowerCase().trim();
+
+          final tachesAffichees = taches.where((tache) {
+            return tache.titre.toLowerCase().contains(recherche);
+          }).toList();
+
+          return LayoutBuilder(
+            builder: (context, contraintes) {
+              final estTablette = contraintes.maxWidth >= 840;
+
+              return Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: estTablette ? 900 : double.infinity,
+                  ),
+                  child: _contenuPrincipal(
+                    tachesAffichees,
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
 
-      // Bouton d'ajout en bas de page
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 12,
-        ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(
-              color: Color(0xFFE9EDF3),
-            ),
-          ),
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: 52,
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: chargementTermine
-                  ? _ajouterEcheance
-                  : null,
-              icon: const Icon(Icons.add, size: 24),
-              label: const Text(
-                'Ajouter une échéance',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: couleurPrincipale,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 2,
-              ),
-            ),
-          ),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: tachesAsync.isLoading ? null : _ajouterTache,
+        backgroundColor: couleurPrincipale,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Ajouter une échéance'),
       ),
     );
   }
 
   // =====================================================
-  // CONTENU DE LA PAGE MES ÉCHÉANCES
+  // CONTENU DE LA PAGE
   // =====================================================
 
-  Widget _contenuPrincipal() {
+  Widget _contenuPrincipal(List<Tache> tachesFiltrees) {
     return ListView(
       padding: const EdgeInsets.all(20),
+
       children: [
         const Text(
           'Mes activités universitaires',
@@ -634,7 +422,6 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
         const SizedBox(height: 25),
 
-        // Nombre de résultats
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -646,8 +433,9 @@ class _EcheancesPageState extends State<EcheancesPage> {
                 color: Color(0xFF173B70),
               ),
             ),
+
             Text(
-              '${echeancesFiltrees.length} résultat(s)',
+              '${tachesFiltrees.length} résultat(s)',
               style: const TextStyle(
                 color: Color(0xFF777777),
                 fontSize: 13,
@@ -658,15 +446,15 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
         const SizedBox(height: 15),
 
-        // Barre de recherche
+        // RECHERCHE
         TextField(
           controller: _rechercheController,
-          onChanged: (value) {
-            setState(() {});
-          },
+          onChanged: (value) => setState(() {}),
+
           decoration: InputDecoration(
             hintText: 'Rechercher une échéance...',
             prefixIcon: const Icon(Icons.search),
+
             suffixIcon: _rechercheController.text.isNotEmpty
                 ? IconButton(
               icon: const Icon(Icons.clear),
@@ -676,8 +464,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
               },
             )
                 : null,
+
             filled: true,
             fillColor: Colors.white,
+
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
@@ -687,14 +477,15 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
         const SizedBox(height: 15),
 
-        // Filtres
+        // FILTRES
         Wrap(
           spacing: 8,
           runSpacing: 8,
+
           children: [
             'Toutes',
             'À faire',
-            'Terminées',
+            'Faites',
             'En retard',
           ].map((filtre) {
             final selectionne = filtreActuel == filtre;
@@ -703,6 +494,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
               label: Text(filtre),
               selected: selectionne,
               selectedColor: const Color(0xFFDCE7F7),
+
               labelStyle: TextStyle(
                 color: selectionne
                     ? couleurPrincipale
@@ -711,6 +503,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
                     ? FontWeight.bold
                     : FontWeight.normal,
               ),
+
               onSelected: (selected) {
                 setState(() {
                   filtreActuel = filtre;
@@ -722,14 +515,16 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
         const SizedBox(height: 18),
 
-        // Liste des échéances
-        if (echeancesFiltrees.isEmpty)
+        // LISTE DES TÂCHES
+        if (tachesFiltrees.isEmpty)
           Container(
             padding: const EdgeInsets.all(30),
+
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
+
             child: const Column(
               children: [
                 Icon(
@@ -737,7 +532,9 @@ class _EcheancesPageState extends State<EcheancesPage> {
                   size: 45,
                   color: Colors.grey,
                 ),
+
                 SizedBox(height: 12),
+
                 Text(
                   'Aucune échéance trouvée.',
                   style: TextStyle(
@@ -749,22 +546,22 @@ class _EcheancesPageState extends State<EcheancesPage> {
             ),
           )
         else
-          ...echeancesFiltrees.map(
-                (echeance) => _echeanceCard(echeance),
+          ...tachesFiltrees.map(
+                (tache) => _tacheCard(tache),
           ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 80),
       ],
     );
   }
 
   // =====================================================
-  // CARTE D'UNE ÉCHÉANCE
+  // CARTE D'UNE TÂCHE
   // =====================================================
 
-  Widget _echeanceCard(Map<String, dynamic> echeance) {
-    final bool terminee = echeance['terminee'] == true;
-    final bool retard = _estEnRetard(echeance);
+  Widget _tacheCard(Tache tache) {
+    final bool terminee = tache.terminee;
+    final bool retard = _estEnRetard(tache);
 
     final Color couleurStatut = terminee
         ? Colors.green
@@ -773,38 +570,43 @@ class _EcheancesPageState extends State<EcheancesPage> {
         : Colors.orange;
 
     final String texteStatut = terminee
-        ? 'Terminée'
+        ? 'Faite'
         : retard
         ? 'En retard'
         : 'À faire';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
+
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+
         border: Border.all(
           color: const Color(0xFFE9EDF3),
         ),
       ),
+
       child: ListTile(
         contentPadding: const EdgeInsets.all(14),
 
         leading: Container(
           width: 48,
           height: 48,
+
           decoration: BoxDecoration(
             color: const Color(0xFFEAF0FA),
             borderRadius: BorderRadius.circular(12),
           ),
+
           child: Icon(
-            _iconeDepuisNom(echeance['icone']),
+            _iconeDepuisNom(tache.icone),
             color: couleurPrincipale,
           ),
         ),
 
         title: Text(
-          echeance['titre'].toString(),
+          tache.titre,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -814,8 +616,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 8),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+
             children: [
               Row(
                 children: [
@@ -824,10 +628,12 @@ class _EcheancesPageState extends State<EcheancesPage> {
                     size: 13,
                     color: Colors.grey,
                   ),
+
                   const SizedBox(width: 6),
+
                   Expanded(
                     child: Text(
-                      echeance['date'].toString(),
+                      tache.date,
                       style: const TextStyle(
                         fontSize: 12,
                         color: Colors.grey,
@@ -844,10 +650,12 @@ class _EcheancesPageState extends State<EcheancesPage> {
                   horizontal: 10,
                   vertical: 5,
                 ),
+
                 decoration: BoxDecoration(
-                  color: couleurStatut.withOpacity(0.12),
+                  color: couleurStatut.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
+
                 child: Text(
                   texteStatut,
                   style: TextStyle(
@@ -861,16 +669,18 @@ class _EcheancesPageState extends State<EcheancesPage> {
           ),
         ),
 
-        // Menu de modification et de suppression
+        // MENU DES ACTIONS
         trailing: PopupMenuButton<String>(
           tooltip: 'Actions',
+
           onSelected: (action) {
             if (action == 'modifier') {
-              _modifierEcheance(echeance);
+              _modifierTache(tache);
             } else if (action == 'supprimer') {
-              _supprimerEcheance(echeance);
+              _supprimerTache(tache);
             }
           },
+
           itemBuilder: (context) => const [
             PopupMenuItem(
               value: 'modifier',
@@ -885,6 +695,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
                 ],
               ),
             ),
+
             PopupMenuItem(
               value: 'supprimer',
               child: Row(
@@ -901,7 +712,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
           ],
         ),
 
-        onTap: () => _ouvrirDetails(echeance),
+        onTap: () => _ouvrirDetails(tache),
       ),
     );
   }

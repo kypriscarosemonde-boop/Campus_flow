@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
 
+import '../models/tache.dart';
+
 class EcheanceFormPage extends StatefulWidget {
   final Map<String, dynamic>? echeance;
 
@@ -89,26 +91,28 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
       }
     }
 
-    return null;
+    return DateTime.tryParse(texte);
   }
 
-  // Enregistrer ou modifier une échéance.
+  // Enregistrer ou modifier une tâche.
   void _enregistrer() {
     if (!_formKey.currentState!.validate()) return;
 
-    final Map<String, dynamic> nouvelleEcheance = {
-      if (estModification) ...widget.echeance!,
-      'titre': _titreController.text.trim(),
-      'date': _dateController.text,
-      'terminee': estModification
+    final Tache tache = Tache(
+      id: estModification
+          ? widget.echeance!['id']?.toString() ?? ''
+          : '',
+      titre: _titreController.text.trim(),
+      date: _dateController.text,
+      terminee: estModification
           ? widget.echeance!['terminee'] == true
           : false,
-      'icone': estModification
-          ? widget.echeance!['icone'] ?? 'event_note'
+      icone: estModification
+          ? widget.echeance!['icone']?.toString() ?? 'event_note'
           : 'event_note',
-    };
+    );
 
-    Navigator.pop(context, nouvelleEcheance);
+    Navigator.pop(context, tache.toMap());
   }
 
   // Choisir une date.
@@ -247,7 +251,9 @@ class _EcheanceFormPageState extends State<EcheanceFormPage> {
                   onPressed: _enregistrer,
                   icon: const Icon(Icons.save),
                   label: Text(
-                    estModification ? 'Enregistrer les modifications' : 'Enregistrer',
+                    estModification
+                        ? 'Enregistrer les modifications'
+                        : 'Enregistrer',
                   ),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF173B70),

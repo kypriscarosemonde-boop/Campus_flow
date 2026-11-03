@@ -1,13 +1,62 @@
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import 'providers/tache_provider.dart';
 import 'pages/echeances_page.dart';
+import 'pages/echeance_detail_page.dart';
+
+// =====================================================
+// ROUTES GO ROUTER
+// =====================================================
+
+final GoRouter appRouter = GoRouter(
+  initialLocation: '/',
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => const HomePage(),
+    ),
+
+    ShellRoute(
+      builder: (context, state, child) {
+        return MainShell(child: child);
+      },
+      routes: [
+        GoRoute(
+          path: '/dashboard',
+          builder: (context, state) => const DashboardPage(),
+        ),
+
+        GoRoute(
+          path: '/echeances',
+          builder: (context, state) => const EcheancesPage(),
+          routes: [
+            GoRoute(
+              path: ':id',
+              builder: (context, state) {
+                final id = state.pathParameters['id']!;
+                return EcheanceDetailPage(id: id);
+              },
+            ),
+          ],
+        ),
+      ],
+    ),
+  ],
+);
+
+// =====================================================
+// DEMARRAGE DE L'APPLICATION
+// =====================================================
 
 void main() {
-  runApp(const CampusFlowApp());
+  runApp(
+    const ProviderScope(
+      child: CampusFlowApp(),
+    ),
+  );
 }
 
 class CampusFlowApp extends StatelessWidget {
@@ -15,9 +64,10 @@ class CampusFlowApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'CampusFlow',
+      routerConfig: appRouter,
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Roboto',
@@ -44,7 +94,55 @@ class CampusFlowApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomePage(),
+    );
+  }
+}
+
+// =====================================================
+// SHELL PRINCIPAL : NAVIGATION BAR
+// =====================================================
+
+class MainShell extends StatelessWidget {
+  final Widget child;
+
+  const MainShell({
+    super.key,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final emplacement = GoRouterState.of(context).uri.path;
+
+    final int indexSelectionne =
+    emplacement.startsWith('/echeances') ? 1 : 0;
+
+    return Scaffold(
+      body: child,
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: indexSelectionne,
+        backgroundColor: Colors.white,
+        indicatorColor: const Color(0xFFDCE7F7),
+        onDestinationSelected: (index) {
+          if (index == 0) {
+            context.go('/dashboard');
+          } else {
+            context.go('/echeances');
+          }
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.dashboard_outlined),
+            selectedIcon: Icon(Icons.dashboard),
+            label: "Vue d'ensemble",
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.calendar_month_outlined),
+            selectedIcon: Icon(Icons.calendar_month),
+            label: 'Échéances',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -81,7 +179,6 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  // Vérification des identifiants
   void _seConnecter() {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -92,12 +189,7 @@ class _HomePageState extends State<HomePage> {
 
     if (email == emailAutorise &&
         motDePasse == motDePasseAutorise) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const DashboardPage(),
-        ),
-      );
+      context.go('/dashboard');
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -137,16 +229,13 @@ class _HomePageState extends State<HomePage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Logo
                       Image.asset(
                         'assets/images/logo.png',
                         width: 100,
                         height: 100,
                         fit: BoxFit.contain,
                       ),
-
                       const SizedBox(height: 15),
-
                       const Text(
                         'Bienvenue sur CampusFlow',
                         textAlign: TextAlign.center,
@@ -156,9 +245,7 @@ class _HomePageState extends State<HomePage> {
                           color: Color(0xFF173B70),
                         ),
                       ),
-
                       const SizedBox(height: 8),
-
                       const Text(
                         'Votre espace universitaire intelligent',
                         textAlign: TextAlign.center,
@@ -167,10 +254,7 @@ class _HomePageState extends State<HomePage> {
                           color: Colors.grey,
                         ),
                       ),
-
                       const SizedBox(height: 30),
-
-                      // Adresse e-mail
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -180,9 +264,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 8),
-
                       TextFormField(
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
@@ -210,10 +292,7 @@ class _HomePageState extends State<HomePage> {
                           return null;
                         },
                       ),
-
                       const SizedBox(height: 20),
-
-                      // Mot de passe
                       const Align(
                         alignment: Alignment.centerLeft,
                         child: Text(
@@ -223,9 +302,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 8),
-
                       TextFormField(
                         controller: passwordController,
                         obscureText: masquerMotDePasse,
@@ -255,14 +332,10 @@ class _HomePageState extends State<HomePage> {
                           if (value == null || value.isEmpty) {
                             return 'Veuillez saisir votre mot de passe';
                           }
-
                           return null;
                         },
                       ),
-
                       const SizedBox(height: 30),
-
-                      // Bouton de connexion
                       SizedBox(
                         width: double.infinity,
                         height: 50,
@@ -277,7 +350,8 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF173B70),
+                            backgroundColor:
+                            const Color(0xFF173B70),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -285,9 +359,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 20),
-
                       const Text(
                         'CampusFlow - Gestion de la vie universitaire',
                         textAlign: TextAlign.center,
@@ -312,30 +384,10 @@ class _HomePageState extends State<HomePage> {
 // PAGE VUE D'ENSEMBLE / TABLEAU DE BORD
 // =====================================================
 
-class DashboardPage extends StatefulWidget {
+class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
-  @override
-  State<DashboardPage> createState() => _DashboardPageState();
-}
-
-class _DashboardPageState extends State<DashboardPage> {
-  int total = 0;
-  int terminees = 0;
-  int aFaire = 0;
-  int enRetard = 0;
-
-  bool chargement = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _chargerStatistiques();
-  }
-
-  // Conversion des dates en DateTime
   DateTime? _convertirDate(String date) {
-    // Format dd/MM/yyyy
     final formatNumerique =
     RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$');
 
@@ -349,7 +401,6 @@ class _DashboardPageState extends State<DashboardPage> {
       );
     }
 
-    // Format avec les mois en français
     final mois = {
       'janvier': 1,
       'février': 2,
@@ -387,76 +438,9 @@ class _DashboardPageState extends State<DashboardPage> {
     return DateTime.tryParse(date);
   }
 
-  // Chargement des statistiques enregistrées
-  Future<void> _chargerStatistiques() async {
-    try {
-      final preferences = await SharedPreferences.getInstance();
-
-      final donnees = preferences.getString('mes_echeances');
-
-      final List<dynamic> liste = donnees == null
-          ? []
-          : jsonDecode(donnees) as List<dynamic>;
-
-      int nombreTerminees = 0;
-      int nombreRetard = 0;
-
-      final aujourdHui = DateUtils.dateOnly(DateTime.now());
-
-      for (final element in liste) {
-        final echeance = Map<String, dynamic>.from(element);
-
-        final estTerminee = echeance['terminee'] == true;
-
-        if (estTerminee) {
-          nombreTerminees++;
-        } else {
-          final date = _convertirDate(
-            echeance['date']?.toString() ?? '',
-          );
-
-          if (date != null &&
-              DateUtils.dateOnly(date).isBefore(aujourdHui)) {
-            nombreRetard++;
-          }
-        }
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        total = liste.length;
-        terminees = nombreTerminees;
-        aFaire = total - terminees;
-        enRetard = nombreRetard;
-        chargement = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        chargement = false;
-      });
-    }
-  }
-
-  double get progression {
-    if (total == 0) return 0;
-    return terminees / total;
-  }
-
-  // Accès à la page Mes échéances
-  Future<void> _ouvrirMesEcheances() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const EcheancesPage(),
-      ),
-    );
-
-    // Actualiser les statistiques au retour
-    _chargerStatistiques();
-  }
+  // ===================================================
+  // CARTE STATISTIQUE
+  // ===================================================
 
   Widget _construireCarteStatistique({
     required String titre,
@@ -471,7 +455,7 @@ class _DashboardPageState extends State<DashboardPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -483,7 +467,7 @@ class _DashboardPageState extends State<DashboardPage> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: couleur.withOpacity(0.12),
+              color: couleur.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -492,9 +476,7 @@ class _DashboardPageState extends State<DashboardPage> {
               size: 24,
             ),
           ),
-
           const SizedBox(height: 15),
-
           Text(
             valeur.toString(),
             style: const TextStyle(
@@ -503,9 +485,7 @@ class _DashboardPageState extends State<DashboardPage> {
               color: Color(0xFF173B70),
             ),
           ),
-
           const SizedBox(height: 4),
-
           Text(
             titre,
             style: const TextStyle(
@@ -518,8 +498,369 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  // ===================================================
+  // CARTE PROGRESSION GENERALE AMELIOREE
+  // ===================================================
+
+  Widget _construireCarteProgression({
+    required int total,
+    required int terminees,
+    required int aFaire,
+    required double progression,
+  }) {
+    final pourcentage = (progression * 100).round();
+
+    final Color couleurProgression;
+
+    if (pourcentage >= 75) {
+      couleurProgression = const Color(0xFF16A36A);
+    } else if (pourcentage >= 40) {
+      couleurProgression = const Color(0xFF2F80ED);
+    } else {
+      couleurProgression = const Color(0xFFFF9800);
+    }
+
+    final String message;
+    final String sousMessage;
+    final IconData iconeMessage;
+
+    if (total == 0) {
+      message = 'Aucune activité enregistrée';
+      sousMessage = 'Ajoutez une échéance pour commencer votre suivi.';
+      iconeMessage = Icons.event_note_outlined;
+    } else if (pourcentage == 100) {
+      message = 'Félicitations !';
+      sousMessage = 'Toutes vos échéances sont terminées.';
+      iconeMessage = Icons.emoji_events_outlined;
+    } else if (pourcentage >= 75) {
+      message = 'Excellent travail !';
+      sousMessage = 'Vous êtes presque au bout de vos objectifs.';
+      iconeMessage = Icons.rocket_launch_outlined;
+    } else if (pourcentage >= 40) {
+      message = 'Bonne progression !';
+      sousMessage = 'Continuez ainsi, vous avancez bien.';
+      iconeMessage = Icons.trending_up;
+    } else {
+      message = 'Chaque effort compte !';
+      sousMessage = 'Continuez à avancer étape par étape.';
+      iconeMessage = Icons.flag_outlined;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // TITRE
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF1FC),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.insights_outlined,
+                  color: Color(0xFF173B70),
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Progression générale',
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF173B70),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          const Text(
+            'Suivez votre avancement dans la réalisation de vos activités.',
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey,
+            ),
+          ),
+
+          const SizedBox(height: 28),
+
+          // CERCLE ET INFORMATIONS
+          LayoutBuilder(
+            builder: (context, contraintes) {
+              final petitEcran = contraintes.maxWidth < 400;
+
+              final cercle = SizedBox(
+                width: 145,
+                height: 145,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 140,
+                      height: 140,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(
+                          begin: 0,
+                          end: progression,
+                        ),
+                        duration: const Duration(milliseconds: 1200),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, valeur, child) {
+                          return CircularProgressIndicator(
+                            value: valeur,
+                            strokeWidth: 11,
+                            strokeCap: StrokeCap.round,
+                            backgroundColor:
+                            const Color(0xFFE8EDF5),
+                            valueColor:
+                            AlwaysStoppedAnimation<Color>(
+                              couleurProgression,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$pourcentage%',
+                          style: TextStyle(
+                            fontSize: 31,
+                            fontWeight: FontWeight.bold,
+                            color: couleurProgression,
+                          ),
+                        ),
+                        const Text(
+                          'Complété',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+
+              final informations = Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      iconeMessage,
+                      color: couleurProgression,
+                      size: 27,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF173B70),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      sousMessage,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (petitEcran) {
+                return Column(
+                  children: [
+                    cercle,
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: informations,
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  cercle,
+                  const SizedBox(width: 25),
+                  informations,
+                ],
+              );
+            },
+          ),
+
+          const SizedBox(height: 28),
+
+          // BARRE DE PROGRESSION
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Avancement global',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                '$pourcentage %',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: couleurProgression,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(
+                begin: 0,
+                end: progression,
+              ),
+              duration: const Duration(milliseconds: 1200),
+              curve: Curves.easeOutCubic,
+              builder: (context, valeur, child) {
+                return LinearProgressIndicator(
+                  value: valeur,
+                  minHeight: 10,
+                  backgroundColor: const Color(0xFFE8EDF5),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    couleurProgression,
+                  ),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 22),
+
+          // DETAILS DES TACHES
+          Row(
+            children: [
+              Expanded(
+                child: _construireIndicateur(
+                  couleur: const Color(0xFF16A36A),
+                  titre: 'Terminées',
+                  valeur: terminees,
+                  icone: Icons.check_circle_outline,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _construireIndicateur(
+                  couleur: const Color(0xFFFF9800),
+                  titre: 'Restantes',
+                  valeur: aFaire,
+                  icone: Icons.pending_actions,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _construireIndicateur(
+                  couleur: const Color(0xFF2F80ED),
+                  titre: 'Total',
+                  valeur: total,
+                  icone: Icons.calendar_month_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===================================================
+  // PETIT INDICATEUR DE STATISTIQUE
+  // ===================================================
+
+  Widget _construireIndicateur({
+    required Color couleur,
+    required String titre,
+    required int valeur,
+    required IconData icone,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 13,
+      ),
+      decoration: BoxDecoration(
+        color: couleur.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icone,
+            color: couleur,
+            size: 20,
+          ),
+          const SizedBox(height: 7),
+          Text(
+            valeur.toString(),
+            style: TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+              color: couleur,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            titre,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ===================================================
+  // CONSTRUCTION DU TABLEAU DE BORD
+  // ===================================================
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tachesAsync = ref.watch(tachesProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -532,244 +873,215 @@ class _DashboardPageState extends State<DashboardPage> {
             tooltip: 'Déconnexion',
             icon: const Icon(Icons.logout),
             onPressed: () {
-              Navigator.pop(context);
+              context.go('/');
             },
           ),
         ],
       ),
 
-      body: RefreshIndicator(
-        onRefresh: _chargerStatistiques,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(20),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 900),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 10),
+      body: tachesAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(),
+        ),
 
-                  const Text(
-                    'Bienvenue sur CampusFlow !',
-                    style: TextStyle(
-                      fontSize: 25,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF173B70),
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  const Text(
-                    'Retrouvez ici un aperçu de vos activités universitaires.',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  const Text(
-                    'Vue générale',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF173B70),
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  if (chargement)
-                    const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  else
-                    LayoutBuilder(
-                      builder: (context, contraintes) {
-                        final largeur = contraintes.maxWidth;
-
-                        final nombreColonnes =
-                        largeur >= 650 ? 4 : 2;
-
-                        return GridView.count(
-                          crossAxisCount: nombreColonnes,
-                          shrinkWrap: true,
-                          physics:
-                          const NeverScrollableScrollPhysics(),
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio:
-                          nombreColonnes == 4 ? 1.15 : 1.25,
-                          children: [
-                            _construireCarteStatistique(
-                              titre: 'Total des échéances',
-                              valeur: total,
-                              icone: Icons.calendar_month,
-                              couleur: const Color(0xFF2F80ED),
-                            ),
-                            _construireCarteStatistique(
-                              titre: 'Terminées',
-                              valeur: terminees,
-                              icone: Icons.check_circle_outline,
-                              couleur: Colors.green,
-                            ),
-                            _construireCarteStatistique(
-                              titre: 'À faire',
-                              valeur: aFaire,
-                              icone: Icons.pending_actions,
-                              couleur: Colors.orange,
-                            ),
-                            _construireCarteStatistique(
-                              titre: 'En retard',
-                              valeur: enRetard,
-                              icone: Icons.warning_amber,
-                              couleur: Colors.red,
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-
-                  const SizedBox(height: 30),
-
-                  // Progression générale
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Progression générale',
-                          style: TextStyle(
-                            fontSize: 19,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF173B70),
-                          ),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        const Text(
-                          'Suivez votre avancement dans la réalisation de vos activités.',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey,
-                          ),
-                        ),
-
-                        const SizedBox(height: 25),
-
-                        Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Avancement global',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            Text(
-                              '${(progression * 100).round()} %',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF173B70),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: LinearProgressIndicator(
-                            value: progression,
-                            minHeight: 12,
-                            backgroundColor:
-                            const Color(0xFFE5EAF2),
-                            valueColor:
-                            const AlwaysStoppedAnimation<Color>(
-                              Colors.green,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 15),
-
-                        Text(
-                          '$terminees échéance(s) terminée(s) sur $total.',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Bouton vers Mes échéances
-                  SizedBox(
-                    width: double.infinity,
-                    height: 55,
-                    child: ElevatedButton.icon(
-                      onPressed: _ouvrirMesEcheances,
-                      icon: const Icon(Icons.calendar_month),
-                      label: const Text(
-                        'Mes échéances',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF173B70),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  const Center(
-                    child: Text(
-                      'CampusFlow - Gestion de la vie universitaire',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-                ],
-              ),
+        error: (erreur, trace) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              'Erreur de chargement des échéances : $erreur',
+              textAlign: TextAlign.center,
             ),
           ),
         ),
+
+        data: (taches) {
+          final total = taches.length;
+
+          final terminees = taches
+              .where((tache) => tache.terminee)
+              .length;
+
+          final aFaire = total - terminees;
+
+          final aujourdHui =
+          DateUtils.dateOnly(DateTime.now());
+
+          final enRetard = taches.where((tache) {
+            if (tache.terminee) return false;
+
+            final date = _convertirDate(tache.date);
+
+            return date != null &&
+                DateUtils.dateOnly(date)
+                    .isBefore(aujourdHui);
+          }).length;
+
+          final progression =
+          total == 0 ? 0.0 : terminees / total;
+
+          return RefreshIndicator(
+            onRefresh: () {
+              return ref
+                  .refresh(tachesProvider.future)
+                  .then((_) {});
+            },
+
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    maxWidth: 900,
+                  ),
+
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 10),
+
+                      const Text(
+                        'Bienvenue sur CampusFlow !',
+                        style: TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF173B70),
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      const Text(
+                        'Retrouvez ici un aperçu de vos activités universitaires.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey,
+                        ),
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      const Text(
+                        'Vue générale',
+                        style: TextStyle(
+                          fontSize: 19,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF173B70),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // CARTES STATISTIQUES
+                      LayoutBuilder(
+                        builder: (context, contraintes) {
+                          final largeur = contraintes.maxWidth;
+
+                          final nombreColonnes =
+                          largeur >= 650 ? 4 : 2;
+
+                          return GridView.count(
+                            crossAxisCount: nombreColonnes,
+                            shrinkWrap: true,
+                            physics:
+                            const NeverScrollableScrollPhysics(),
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio:
+                            nombreColonnes == 4 ? 1.15 : 1.25,
+                            children: [
+                              _construireCarteStatistique(
+                                titre: 'Total des échéances',
+                                valeur: total,
+                                icone: Icons.calendar_month,
+                                couleur: const Color(0xFF2F80ED),
+                              ),
+
+                              _construireCarteStatistique(
+                                titre: 'Terminées',
+                                valeur: terminees,
+                                icone: Icons.check_circle_outline,
+                                couleur: Colors.green,
+                              ),
+
+                              _construireCarteStatistique(
+                                titre: 'À faire',
+                                valeur: aFaire,
+                                icone: Icons.pending_actions,
+                                couleur: Colors.orange,
+                              ),
+
+                              _construireCarteStatistique(
+                                titre: 'En retard',
+                                valeur: enRetard,
+                                icone: Icons.warning_amber,
+                                couleur: Colors.red,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // PROGRESSION GENERALE AMELIOREE
+                      _construireCarteProgression(
+                        total: total,
+                        terminees: terminees,
+                        aFaire: aFaire,
+                        progression: progression,
+                      ),
+
+                      const SizedBox(height: 30),
+
+                      // BOUTON MES ECHEANCES
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            context.go('/echeances');
+                          },
+                          icon: const Icon(Icons.calendar_month),
+                          label: const Text(
+                            'Mes échéances',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF173B70),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      const Center(
+                        child: Text(
+                          'CampusFlow - Gestion de la vie universitaire',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
