@@ -70,7 +70,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
     super.dispose();
   }
 
-  // Convertir le nom d'une icône en icône Flutter.
+  // =====================================================
+  // GESTION DES ICÔNES
+  // =====================================================
+
   IconData _iconeDepuisNom(dynamic nom) {
     switch (nom) {
       case 'calendar_month':
@@ -89,15 +92,18 @@ class _EcheancesPageState extends State<EcheancesPage> {
     }
   }
 
-  // Convertir une date en DateTime.
+  // =====================================================
+  // GESTION DES DATES
+  // =====================================================
+
   DateTime? _convertirDate(dynamic valeur) {
     if (valeur == null) return null;
 
     final texte = valeur.toString().trim();
 
-    final formatNumerique = RegExp(
-      r'^(\d{1,2})/(\d{1,2})/(\d{4})$',
-    );
+    // Format : 01/11/2026
+    final formatNumerique =
+    RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$');
 
     final correspondance = formatNumerique.firstMatch(texte);
 
@@ -109,22 +115,26 @@ class _EcheancesPageState extends State<EcheancesPage> {
       );
     }
 
+    // Format : 01 novembre 2026
     const mois = {
       'janvier': 1,
       'février': 2,
+      'fevrier': 2,
       'mars': 3,
       'avril': 4,
       'mai': 5,
       'juin': 6,
       'juillet': 7,
       'août': 8,
+      'aout': 8,
       'septembre': 9,
       'octobre': 10,
       'novembre': 11,
       'décembre': 12,
+      'decembre': 12,
     };
 
-    final parties = texte.toLowerCase().split(' ');
+    final parties = texte.toLowerCase().split(RegExp(r'\s+'));
 
     if (parties.length == 3) {
       final jour = int.tryParse(parties[0]);
@@ -136,7 +146,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
       }
     }
 
-    return null;
+    return DateTime.tryParse(texte);
   }
 
   // Vérifier si une échéance est en retard.
@@ -158,7 +168,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
     return date.isBefore(aujourdHui);
   }
 
-  // Sauvegarder les échéances.
+  // =====================================================
+  // SAUVEGARDE ET CHARGEMENT
+  // =====================================================
+
   Future<void> _sauvegarderEcheances() async {
     final preferences = await SharedPreferences.getInstance();
 
@@ -167,7 +180,6 @@ class _EcheancesPageState extends State<EcheancesPage> {
     await preferences.setString('mes_echeances', donnees);
   }
 
-  // Charger les échéances sauvegardées.
   Future<void> _chargerEcheances() async {
     try {
       final preferences = await SharedPreferences.getInstance();
@@ -178,8 +190,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
         final List<dynamic> liste = jsonDecode(donnees);
 
         final listeChargee = liste.map((element) {
-          final Map<String, dynamic> nouvelle =
-          Map<String, dynamic>.from(element);
+          final nouvelle = Map<String, dynamic>.from(element);
 
           nouvelle['terminee'] = nouvelle['terminee'] == true;
 
@@ -217,7 +228,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
     }
   }
 
-  // Ajouter une échéance.
+  // =====================================================
+  // AJOUT D'UNE ÉCHÉANCE
+  // =====================================================
+
   Future<void> _ajouterEcheance() async {
     final nouvelleEcheance = await Navigator.push(
       context,
@@ -260,7 +274,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
     }
   }
 
-  // Modifier une échéance.
+  // =====================================================
+  // MODIFICATION D'UNE ÉCHÉANCE
+  // =====================================================
+
   Future<void> _modifierEcheance(
       Map<String, dynamic> echeance,
       ) async {
@@ -309,7 +326,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
     }
   }
 
-  // Supprimer une échéance après confirmation.
+  // =====================================================
+  // SUPPRESSION D'UNE ÉCHÉANCE
+  // =====================================================
+
   Future<void> _supprimerEcheance(
       Map<String, dynamic> echeance,
       ) async {
@@ -377,7 +397,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
     }
   }
 
-  // Ouvrir les détails d'une échéance.
+  // =====================================================
+  // CONSULTATION DES DÉTAILS
+  // =====================================================
+
   Future<void> _ouvrirDetails(
       Map<String, dynamic> echeance,
       ) async {
@@ -399,7 +422,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
     }
   }
 
-  // Marquer une échéance comme terminée.
+  // =====================================================
+  // MARQUER UNE ÉCHÉANCE COMME TERMINÉE
+  // =====================================================
+
   Future<void> _marquerCommeTerminee(
       Map<String, dynamic> echeance,
       ) async {
@@ -432,15 +458,17 @@ class _EcheancesPageState extends State<EcheancesPage> {
     }
   }
 
-  // Calculer les échéances visibles selon la recherche et le filtre.
+  // =====================================================
+  // RECHERCHE ET FILTRAGE
+  // =====================================================
+
   List<Map<String, dynamic>> get echeancesFiltrees {
     final recherche = _rechercheController.text.toLowerCase().trim();
 
     return echeances.where((echeance) {
       final titre = echeance['titre'].toString().toLowerCase();
 
-      final correspondRecherche =
-      titre.contains(recherche);
+      final correspondRecherche = titre.contains(recherche);
 
       bool correspondFiltre = true;
 
@@ -466,21 +494,12 @@ class _EcheancesPageState extends State<EcheancesPage> {
     }).toList();
   }
 
+  // =====================================================
+  // INTERFACE PRINCIPALE
+  // =====================================================
+
   @override
   Widget build(BuildContext context) {
-    final int total = echeances.length;
-
-    final int terminees =
-        echeances.where((e) => e['terminee'] == true).length;
-
-    final int restantes = total - terminees;
-
-    final int enRetard =
-        echeances.where(_estEnRetard).length;
-
-    final double progression =
-    total == 0 ? 0 : terminees / total;
-
     return Scaffold(
       backgroundColor: couleurFond,
 
@@ -491,28 +510,28 @@ class _EcheancesPageState extends State<EcheancesPage> {
 
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          tooltip: 'Retour à l’accueil',
+          tooltip: "Retour à la vue d'ensemble",
           onPressed: () {
             Navigator.pop(context);
           },
         ),
 
         title: const Text(
-          'CampusFlow',
+          'Mes échéances',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 21,
           ),
         ),
 
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(right: 16),
             child: CircleAvatar(
-              backgroundColor: Color(0xFFEAF0FA),
+              backgroundColor: const Color(0xFFEAF0FA),
               child: Icon(
                 Icons.person,
-                color: Color(0xFF173B70),
+                color: couleurPrincipale,
               ),
             ),
           ),
@@ -533,270 +552,100 @@ class _EcheancesPageState extends State<EcheancesPage> {
           return Center(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                maxWidth:
-                estTablette ? 900 : double.infinity,
+                maxWidth: estTablette ? 900 : double.infinity,
               ),
-              child: _contenuPrincipal(
-                total,
-                terminees,
-                restantes,
-                enRetard,
-                progression,
-              ),
+              child: _contenuPrincipal(),
             ),
           );
         },
       ),
 
+      // Bouton d'ajout en bas de page
       bottomNavigationBar: Container(
-        height: 90,
         padding: const EdgeInsets.symmetric(
           horizontal: 20,
-          vertical: 10,
+          vertical: 12,
         ),
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(
-            top: BorderSide(color: Color(0xFFE9EDF3)),
+            top: BorderSide(
+              color: Color(0xFFE9EDF3),
+            ),
           ),
         ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.event_note,
-                    color: Color(0xFF173B70),
-                    size: 26,
-                  ),
-                  SizedBox(height: 5),
-                  Text(
-                    'Échéances',
-                    style: TextStyle(
-                      color: Color(0xFF173B70),
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(
-                    Icons.check_circle_outline,
-                    color: Color(0xFF454B55),
-                    size: 26,
-                  ),
-                  SizedBox(height: 5),
-                  Text(
-                    'Terminées',
-                    style: TextStyle(
-                      color: Color(0xFF454B55),
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            Expanded(
-              flex: 2,
-              child: SizedBox(
-                height: 55,
-                child: ElevatedButton.icon(
-                  onPressed: chargementTermine
-                      ? _ajouterEcheance
-                      : null,
-                  icon: const Icon(Icons.add, size: 25),
-                  label: const Text(
-                    'Ajouter une échéance',
-                    style: TextStyle(fontSize: 14),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: couleurPrincipale,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    elevation: 3,
-                  ),
+        child: SafeArea(
+          child: SizedBox(
+            height: 52,
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: chargementTermine
+                  ? _ajouterEcheance
+                  : null,
+              icon: const Icon(Icons.add, size: 24),
+              label: const Text(
+                'Ajouter une échéance',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: couleurPrincipale,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 2,
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  // Contenu principal.
-  Widget _contenuPrincipal(
-      int total,
-      int terminees,
-      int restantes,
-      int enRetard,
-      double progression,
-      ) {
+  // =====================================================
+  // CONTENU DE LA PAGE MES ÉCHÉANCES
+  // =====================================================
+
+  Widget _contenuPrincipal() {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
         const Text(
-          'Bonjour 👋',
+          'Mes activités universitaires',
           style: TextStyle(
-            fontSize: 26,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Color(0xFF173B70),
           ),
         ),
 
-        const SizedBox(height: 6),
+        const SizedBox(height: 7),
 
         const Text(
-          'Voici le suivi de vos activités universitaires.',
+          'Consultez, recherchez et gérez toutes vos échéances.',
           style: TextStyle(
             fontSize: 14,
             color: Color(0xFF777777),
           ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 25),
 
-        const Text(
-          'Vue d’ensemble',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF173B70),
-          ),
-        ),
-
-        const SizedBox(height: 14),
-
-        // Statistiques principales.
-        Row(
-          children: [
-            Expanded(
-              child: _statCard(
-                'Total',
-                total.toString(),
-                Icons.event_note,
-                couleurPrincipale,
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            Expanded(
-              child: _statCard(
-                'Terminées',
-                terminees.toString(),
-                Icons.check_circle,
-                Colors.green,
-              ),
-            ),
-
-            const SizedBox(width: 8),
-
-            Expanded(
-              child: _statCard(
-                'À faire',
-                restantes.toString(),
-                Icons.pending_actions,
-                Colors.orange,
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // Statistique des retards.
-        _statCard(
-          'En retard',
-          enRetard.toString(),
-          Icons.warning_amber_rounded,
-          Colors.red,
-        ),
-
-        const SizedBox(height: 20),
-
-        // Progression générale.
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFFE9EDF3),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Progression générale',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  color: Color(0xFF173B70),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              Row(
-                mainAxisAlignment:
-                MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Échéances terminées',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                  Text(
-                    '${(progression * 100).round()} %',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF173B70),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(
-                  value: progression,
-                  minHeight: 10,
-                  backgroundColor: const Color(0xFFE9EDF3),
-                  color: Colors.green,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 28),
-
-        // Titre de la liste.
+        // Nombre de résultats
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Mes échéances',
+              'Liste des échéances',
               style: TextStyle(
                 fontSize: 19,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF173B70),
               ),
             ),
-
             Text(
               '${echeancesFiltrees.length} résultat(s)',
               style: const TextStyle(
@@ -807,9 +656,9 @@ class _EcheancesPageState extends State<EcheancesPage> {
           ],
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 15),
 
-        // Barre de recherche.
+        // Barre de recherche
         TextField(
           controller: _rechercheController,
           onChanged: (value) {
@@ -836,9 +685,9 @@ class _EcheancesPageState extends State<EcheancesPage> {
           ),
         ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 15),
 
-        // Filtres.
+        // Filtres
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -871,12 +720,12 @@ class _EcheancesPageState extends State<EcheancesPage> {
           }).toList(),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
 
-        // Liste filtrée.
+        // Liste des échéances
         if (echeancesFiltrees.isEmpty)
           Container(
-            padding: const EdgeInsets.all(25),
+            padding: const EdgeInsets.all(30),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -885,13 +734,16 @@ class _EcheancesPageState extends State<EcheancesPage> {
               children: [
                 Icon(
                   Icons.search_off,
-                  size: 40,
+                  size: 45,
                   color: Colors.grey,
                 ),
-                SizedBox(height: 10),
+                SizedBox(height: 12),
                 Text(
                   'Aucune échéance trouvée.',
-                  style: TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -900,67 +752,17 @@ class _EcheancesPageState extends State<EcheancesPage> {
           ...echeancesFiltrees.map(
                 (echeance) => _echeanceCard(echeance),
           ),
+
+        const SizedBox(height: 20),
       ],
     );
   }
 
-  // Carte statistique.
-  Widget _statCard(
-      String titre,
-      String valeur,
-      IconData icone,
-      Color couleur,
-      ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 16,
-        horizontal: 10,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFE9EDF3),
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icone,
-            color: couleur,
-            size: 25,
-          ),
+  // =====================================================
+  // CARTE D'UNE ÉCHÉANCE
+  // =====================================================
 
-          const SizedBox(height: 10),
-
-          Text(
-            valeur,
-            style: TextStyle(
-              fontSize: 23,
-              fontWeight: FontWeight.bold,
-              color: couleur,
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          Text(
-            titre,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF777777),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Carte d'une échéance.
-  Widget _echeanceCard(
-      Map<String, dynamic> echeance,
-      ) {
+  Widget _echeanceCard(Map<String, dynamic> echeance) {
     final bool terminee = echeance['terminee'] == true;
     final bool retard = _estEnRetard(echeance);
 
@@ -1022,9 +824,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
                     size: 13,
                     color: Colors.grey,
                   ),
-
                   const SizedBox(width: 6),
-
                   Expanded(
                     child: Text(
                       echeance['date'].toString(),
@@ -1061,6 +861,7 @@ class _EcheancesPageState extends State<EcheancesPage> {
           ),
         ),
 
+        // Menu de modification et de suppression
         trailing: PopupMenuButton<String>(
           tooltip: 'Actions',
           onSelected: (action) {
@@ -1075,7 +876,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
               value: 'modifier',
               child: Row(
                 children: [
-                  Icon(Icons.edit, color: Color(0xFF173B70)),
+                  Icon(
+                    Icons.edit,
+                    color: Color(0xFF173B70),
+                  ),
                   SizedBox(width: 10),
                   Text('Modifier'),
                 ],
@@ -1085,7 +889,10 @@ class _EcheancesPageState extends State<EcheancesPage> {
               value: 'supprimer',
               child: Row(
                 children: [
-                  Icon(Icons.delete, color: Colors.red),
+                  Icon(
+                    Icons.delete,
+                    color: Colors.red,
+                  ),
                   SizedBox(width: 10),
                   Text('Supprimer'),
                 ],
